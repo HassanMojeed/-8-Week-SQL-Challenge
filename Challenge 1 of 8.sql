@@ -96,16 +96,16 @@ FROM
         
 -- 5.	Which item was the most popular for each customer?
 WITH combined_table AS(
-					SELECT s.customer_id,
-							s.product_id,
-                            m.product_name,
-                            COUNT(customer_id) AS purchase,
-							RANK () OVER (PARTITION BY customer_id ORDER BY COUNT(customer_id) DESC) ranked_column 
-					FROM sales s
-					LEFT JOIN menu m 
-						 ON s.product_id = m.product_id
-					GROUP BY s.customer_id,s.product_id,m.product_name
-                    )
+	SELECT s.customer_id,
+	    s.product_id,
+	    m.product_name,
+	    COUNT(customer_id) AS purchase,
+			RANK () OVER (PARTITION BY customer_id ORDER BY COUNT(customer_id) DESC) ranked_column 
+	FROM sales s
+	LEFT JOIN menu m 
+		 ON s.product_id = m.product_id
+	GROUP BY s.customer_id,s.product_id,m.product_name
+	    )
 SELECT customer_id,
 		product_name, 
         purchase
@@ -115,10 +115,10 @@ WHERE ranked_column = 1;
 -- 6.	Which item was purchased first by the customer after they became a member?
 WITH combined_view AS 
 	(SELECT s.customer_id, 
-			m.product_name,
-			ms.join_date,
-            s.order_date,
-            ROW_NUMBER () OVER (PARTITION BY customer_id ORDER BY s.order_date ASC)  AS ordered_col
+		m.product_name,
+		ms.join_date,
+		s.order_date,
+		ROW_NUMBER () OVER (PARTITION BY customer_id ORDER BY s.order_date ASC)  AS ordered_col
 	FROM sales s
 	LEFT JOIN menu m
 		ON s.product_id = m.product_id
@@ -132,10 +132,10 @@ WHERE ordered_col = 1;
 -- 7.	Which item was purchased just before the customer became a member
 WITH combined_view AS 
 	(SELECT s.customer_id, 
-			m.product_name,
-			ms.join_date,
-            s.order_date,
-            DENSE_RANK () OVER (PARTITION BY customer_id ORDER BY s.order_date ASC)  AS ordered_col
+		m.product_name,
+		ms.join_date,
+            	s.order_date,
+            	DENSE_RANK () OVER (PARTITION BY customer_id ORDER BY s.order_date ASC)  AS ordered_col
 	FROM sales s
 	LEFT JOIN menu m
 		ON s.product_id = m.product_id
@@ -149,12 +149,12 @@ WHERE  ordered_col = 1;
 -- 8.	What is the total items and amount spent for each member before they became a member?
 WITH combined_view AS 
 	(SELECT s.customer_id,
-			s.product_id,
-			m.product_name,
-			ms.join_date,
-            s.order_date,
-            m.price,            
-            DENSE_RANK () OVER (PARTITION BY customer_id ORDER BY s.order_date ASC)  AS ordered_col
+		s.product_id,
+		m.product_name,
+		ms.join_date,
+		s.order_date,
+		m.price,            
+		DENSE_RANK () OVER (PARTITION BY customer_id ORDER BY s.order_date ASC)  AS ordered_col
 	FROM sales s
 	LEFT JOIN menu m
 		ON s.product_id = m.product_id
@@ -170,9 +170,9 @@ GROUP BY customer_id
 
 SELECT s.customer_id, 
 	   SUM(CASE 
-			WHEN s.product_id = 1 THEN m.price * 20
-			ELSE m.price * 10
-            END) total_points
+		  WHEN s.product_id = 1 THEN m.price * 20
+		  ELSE m.price * 10
+            	END) total_points
 FROM sales s 
 LEFT JOIN menu m 
 	ON s.product_id = m.product_id
@@ -181,10 +181,10 @@ GROUP BY s.customer_id;
 /* 10.	In the first week after a customer joins the program (including their join date) they earn 2x points 
 		on all items, not just sushi - how many points do customer A and B have at the end of January?*/
 SELECT s.customer_id, 
-		SUM(CASE
-				WHEN m.product_name = "sushi" THEN price *20
-				WHEN order_date BETWEEN join_date AND DATE_ADD(mbs.join_date, INTERVAL 6 DAY) THEN price * 20
-				ELSE price * 10
+	SUM(CASE
+		WHEN m.product_name = "sushi" THEN price *20
+		WHEN order_date BETWEEN join_date AND DATE_ADD(mbs.join_date, INTERVAL 6 DAY) THEN price * 20
+		ELSE price * 10
 	   END) AS total_points
 FROM sales s 
 LEFT JOIN menu m 
@@ -200,9 +200,9 @@ SELECT s.customer_id,
 	   m.product_name,
 	   m.price,
        CASE
-			WHEN s.order_date >= mbs.join_date THEN "Y"
+	    WHEN s.order_date >= mbs.join_date THEN "Y"
             ELSE "N"
-	   END AS "member"
+       END AS "member"
 FROM sales s
 LEFT JOIN menu m
 	 ON s.product_id = m.product_id
@@ -212,22 +212,22 @@ LEFT JOIN members mbs
      
 -- Bonus Question 2     
 WITH extracted_table AS
-					(SELECT s.customer_id,
-						    s.order_date,
-						    m.product_name,
-						    m.price,
-						    CASE
-								WHEN s.order_date >= mbs.join_date THEN "Y"
-								ELSE "N"
-						    END AS "member"
-					FROM sales s
-					LEFT JOIN menu m
-						ON s.product_id = m.product_id
-					LEFT JOIN members mbs
-						ON s.customer_id = mbs.customer_id)
+		(SELECT s.customer_id,
+			    s.order_date,
+			    m.product_name,
+			    m.price,
+			    CASE
+				WHEN s.order_date >= mbs.join_date THEN "Y"
+				ELSE "N"
+			    END AS "member"
+		FROM sales s
+		LEFT JOIN menu m
+			ON s.product_id = m.product_id
+		LEFT JOIN members mbs
+			ON s.customer_id = mbs.customer_id)
 	SELECT *,
 		   CASE 
-				WHEN et.member = "N" THEN "null"
-				ELSE DENSE_RANK () OVER (PARTITION BY et.customer_id, et.member ORDER BY et.order_date)
-       END ranking
+			WHEN et.member = "N" THEN "null"
+			ELSE DENSE_RANK () OVER (PARTITION BY et.customer_id, et.member ORDER BY et.order_date)
+       		   END ranking
 FROM extracted_table et;
